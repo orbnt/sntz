@@ -1,0 +1,12 @@
+body { background: #f6f7fa; }
+.card { border-radius: 18px; box-shadow: 0 2px 12px #0001; }
+.card-header { border-radius: 18px 18px 0 0 !important; }
+
+.dashboard-card {
+    border-radius: 1.5rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.dashboard-card:hover {
+    box-shadow: 0 8px 40px #0070f340;
+    transform: translateY(-4px) scale(1.025);
+}

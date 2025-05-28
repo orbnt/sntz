@@ -1302,6 +1302,80 @@ function logout() {
   showLoginModal();
 }
 
+// URL OpenSheet (ubah sesuai file sheet kamu)
+const PINJAMAN_SHEET_URL = 'https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/History%20Peminjaman';
+
+// Fungsi util mapping nama barang ke id barang lokal
+function getBarangIdByName(namaBarang) {
+    const barang = getData('barang');
+    const b = barang.find(x => x.nama.trim().toLowerCase() === namaBarang.trim().toLowerCase());
+    return b ? b.id : null;
+}
+
+// Fungsi Refresh Status khusus user yang sedang login (peminjam)
+async function refreshStatusPinjamanUser() {
+    if (!CURRENT_USER) return;
+    const res = await fetch(PINJAMAN_SHEET_URL);
+    const rows = await res.json();
+    let pinjamans = [];
+    rows.forEach(row => {
+        if (row['Username'] !== CURRENT_USER.username) return; // Hanya data user ini
+        const barangId = getBarangIdByName(row['Nama Barang']);
+        if (!barangId) return;
+        const status = row['Status'];
+        const sudahKembali = status === 'Kembali';
+        pinjamans.push({
+            username: row['Username'],
+            barangId,
+            jumlah: parseInt(row['Jumlah']),
+            tanggal: new Date(row['Tanggal']).toISOString(),
+            status: status === 'Pinjam' ? 'approved' : 'approved',
+            sudahKembali: sudahKembali,
+        });
+    });
+    setPinjamans(pinjamans);
+    showToast('Status peminjaman berhasil diperbarui!', 'success');
+    refreshRiwayatPinjam();
+}
+
+// Hubungkan ke tombol
+document.getElementById('btnRefreshPinjamans').onclick = refreshStatusPinjamanUser;
+
+// Fungsi untuk mengupdate localStorage pinjamans dari Google Sheets
+async function getPinjamansFromSheet() {
+    const res = await fetch(PINJAMAN_SHEET_URL);
+    const rows = await res.json();
+    // Format ke data localStorage, hanya status 'Pinjam' & 'Kembali'
+    // Ambil yang status 'Pinjam' untuk pending/approved, 'Kembali' untuk yang sudah kembali
+    let pinjamans = [];
+    rows.forEach(row => {
+        // Hanya proses baris yang nama barang ada di data master
+        const barangId = getBarangIdByName(row['Nama Barang']);
+        if (!barangId) return;
+        const status = row['Status'];
+        const sudahKembali = status === 'Kembali';
+        pinjamans.push({
+            username: row['Username'],
+            barangId,
+            jumlah: parseInt(row['Jumlah']),
+            tanggal: new Date(row['Tanggal']).toISOString(),
+            status: status === 'Pinjam' ? 'approved' : 'approved', // default, atau gunakan row['Status'] jika ada
+            sudahKembali: sudahKembali,
+        });
+    });
+    setPinjamans(pinjamans);
+    showToast('Data peminjaman berhasil diambil dari Google Sheets!', 'success');
+    // Refresh tampilan approval, riwayat, dsb.
+    if (CURRENT_USER) {
+        if (CURRENT_USER.role === 'admin') {
+            renderApprovalTable();
+        } else {
+            refreshRiwayatPinjam();
+        }
+    }
+}
+
+
 function logAudit(action, detail) {
   let logs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
   logs.unshift({
@@ -1447,3 +1521,7 @@ window.addEventListener('DOMContentLoaded', () => {
   refreshRuangan();
   refreshBarang();
 });
+
+document.getElementById('btnGetPinjamans').onclick = function() {
+    getPinjamansFromSheet();
+};

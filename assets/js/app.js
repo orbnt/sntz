@@ -913,11 +913,10 @@ function renderApprovalTable() {
   document.getElementById('approvalTable').innerHTML = html;
 }
 
-window.approvePinjaman = function (idx) {
+window.approvePinjaman = async function (idx) {
   let pinjamans = getPinjamans();
   let pending = pinjamans.filter(p => p.status === 'pending');
   let p = pending[idx];
-  // Temukan index global
   let globalIdx = pinjamans.findIndex(x => x.username === p.username && x.tanggal === p.tanggal && x.status === 'pending');
   if (globalIdx > -1) {
     pinjamans[globalIdx].status = 'approved';
@@ -927,8 +926,11 @@ window.approvePinjaman = function (idx) {
     renderApprovalTable();
     refreshRiwayatPinjam();
     refreshBarangPinjamSelect();
+    // Tambah: Sync otomatis ke Sheet (status PINJAM)
+    await syncSinglePinjamanToSheet(pinjamans[globalIdx], 'pinjam');
   }
 }
+
 window.rejectPinjaman = function (idx) {
   let pinjamans = getPinjamans();
   let pending = pinjamans.filter(p => p.status === 'pending');
@@ -1237,7 +1239,7 @@ function setUsers(users) {
   localStorage.setItem('users', JSON.stringify(users));
 }
 
-window.kembalikanPinjaman = function (idx) {
+window.kembalikanPinjaman = async function (idx) {
   let pinjamans = getPinjamans();
   let pinjamanSaya = pinjamans.filter(p => p.username === CURRENT_USER.username);
   let pinjaman = pinjamanSaya[idx];
@@ -1248,8 +1250,11 @@ window.kembalikanPinjaman = function (idx) {
     setPinjamans(pinjamans);
     refreshRiwayatPinjam();
     refreshBarangPinjamSelect();
+    // Tambah: Sync otomatis ke Sheet (status KEMBALI)
+    await syncSinglePinjamanToSheet(pinjamans[globalIdx], 'kembali');
   }
 }
+
 
 // panggil cekAksesUI() setelah login & tab aktif
 
@@ -1294,7 +1299,7 @@ function doPost(e) {
   }
 }
 
-const PINJAM_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycCrhJP0hUlpsf8n3nJTXh05WjF3K39nL5yzIoV5zw6vzBuQEM4Ctd9UOXrVY5ENqh/exec';
+const PINJAM_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8i7CXrMj8zpBf7X6wn_24TBhEsvgQWY6-PcyrF1p3Q6muQ4TPgcr6wYwpXxo0erXB/exec';
 
 // Kirim semua transaksi baru (belum terkirim)
 async function syncPinjamansToSheet() {
@@ -1351,6 +1356,41 @@ async function syncPinjamansToSheet() {
     alert('Gagal sync ke Google Sheet! ' + err.message);
   }
 }
+
+// Kirim SATU transaksi pinjaman ke Google Sheets (async)
+async function syncSinglePinjamanToSheet(pinjamObj, tipe) {
+  let barang = getData('barang');
+  let b = barang.find(bb => bb.id === pinjamObj.barangId) || {};
+  let payload = [{
+    tanggal: new Date(tipe === 'kembali' ? pinjamObj.tanggalKembali : pinjamObj.tanggal).toLocaleString(),
+    username: pinjamObj.username,
+    namaBarang: b.nama || '-',
+    kategori: b.kategori || '-',
+    jumlah: pinjamObj.jumlah,
+    status: tipe === 'kembali' ? 'Kembali' : 'Pinjam',
+    keterangan: ''
+  }];
+  try {
+    await fetch(PINJAM_SHEET_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors'
+    });
+    // Mark as synced hanya untuk status terkait
+    pinjamObj.synced = true;
+    let pinjamans = getPinjamans();
+    let idx = pinjamans.findIndex(x => x.username === pinjamObj.username && x.tanggal === pinjamObj.tanggal);
+    if (idx > -1) {
+      pinjamans[idx] = pinjamObj;
+      setPinjamans(pinjamans);
+    }
+    showToast('Data berhasil dikirim ke Google Sheet!', 'success');
+  } catch (err) {
+    showToast('Gagal sync ke Google Sheet! ' + err.message, 'danger');
+  }
+}
+
 
 function updateUserInfo() {
   document.getElementById('userInfo').innerHTML = CURRENT_USER ?
@@ -1457,7 +1497,7 @@ document.getElementById('btnExportAuditLog').onclick = function () {
 };
 
 
-document.getElementById('btnSyncPinjamans').onclick = syncPinjamansToSheet;
+document.getElementById('btnSyncPinjamans').style.display = "none";
 
 document.querySelector('a[href="#peminjaman"]').addEventListener('shown.bs.tab', function () {
   if (CURRENT_USER && CURRENT_USER.role === 'peminjam') {

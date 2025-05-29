@@ -1,4 +1,9 @@
 // --- MASTER DATA --- //
+const SHEET_ID = '1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI';
+const AUTH_API_URL = `https://opensheet.vercel.app/${SHEET_ID}/Auth`; // Untuk GET data user (login)
+const PASS_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJbc9KbBN9jfVDpfHTFXvUm4OOqjlWRgDd1paHFZRB63OQ4k4bLkfSk0tCrji3BRs/exec'; // Untuk POST user baru
+
+
 const LS = window.localStorage;
 
 // Helpers
@@ -813,20 +818,6 @@ document.getElementById('btnLaporanSelisih').onclick = async function () {
 };
 
 
-// Ensure admin user exists
-function ensureDefaultAdmin() {
-  let users = getUsers();
-  if (!users.find(u => u.username === 'admin')) {
-    users.push({
-      username: 'admin',
-      password: 'admin123',
-      role: 'admin',
-      kategoriAkses: []
-    });
-    setUsers(users);
-  }
-}
-
 // Login Modal Show/Hide
 function showLoginModal() {
   document.getElementById('loginModal').style.display = 'block';
@@ -840,20 +831,63 @@ function hideLoginModal() {
 let CURRENT_USER = getCurrentUser();
 
 
+async function fetchUsersFromSheet() {
+  try {
+    let res = await fetch(AUTH_API_URL);
+    let users = await res.json();
+    // Normalisasi kategoriAkses agar selalu array
+    users = users.map(u => ({
+      ...u,
+      kategoriAkses: Array.isArray(u.kategoriAkses)
+        ? u.kategoriAkses
+        : (typeof u.kategoriAkses === 'string'
+            ? u.kategoriAkses.split(',').map(s => s.trim()).filter(Boolean)
+            : [])
+    }));
+    setUsers(users); // kalau mau simpan ke localStorage
+    return users;
+  } catch (err) {
+    // Fallback jika error ambil user dari sheet
+    return getUsers(); // dari localStorage
+  }
+}
+
 // Handler Login (dengan persistensi)
-document.getElementById('formLogin').onsubmit = function (e) {
+document.getElementById('formLogin').onsubmit = async function (e) {
   e.preventDefault();
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
-  const users = getUsers();
+
+  let users = [];
+  let online = true;
+
+  try {
+    const res = await fetch(AUTH_API_URL);
+    users = await res.json();
+    // Pastikan kategoriAkses selalu array
+    users = users.map(u => ({
+      ...u,
+      kategoriAkses: Array.isArray(u.kategoriAkses)
+        ? u.kategoriAkses
+        : (typeof u.kategoriAkses === 'string'
+            ? u.kategoriAkses.split(',').map(s => s.trim()).filter(Boolean)
+            : [])
+    }));
+    setUsers(users); // simpan ke local storage untuk fallback offline
+  } catch (err) {
+    online = false;
+    users = getUsers(); // fallback ke local
+    showToast("Mode offline! Login pakai data lokal.", "warning");
+  }
+
+  // Cari user yang cocok
   const user = users.find(u => u.username === username && u.password === password);
   if (user) {
     CURRENT_USER = user;
-    setCurrentUser(user); // PENTING!
+    setCurrentUser(user);
     hideLoginModal();
     updateUserInfo();
     cekAksesUI();
-    // Auto-redirect ke dashboard
     document.querySelector('a[href="#dashboard"]').click();
     if (CURRENT_USER.role === 'peminjam') {
       refreshBarangPinjamSelect();
@@ -867,6 +901,7 @@ document.getElementById('formLogin').onsubmit = function (e) {
     alert('Login gagal. Cek username/password!');
   }
 };
+
 
 function renderApprovalTable() {
   if (!CURRENT_USER || CURRENT_USER.role !== 'admin') {
@@ -1075,7 +1110,11 @@ function refreshUserTable() {
       <tr>
         <td>${u.username}</td>
         <td>${u.role}</td>
-        <td>${u.kategoriAkses ? u.kategoriAkses.join(', ') : ''}</td>
+        <td>${
+  Array.isArray(u.kategoriAkses)
+    ? u.kategoriAkses.join(', ')
+    : (typeof u.kategoriAkses === 'string' ? u.kategoriAkses : '')
+}</td>
         <td>
           ${u.username !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${i})">Hapus</button>` : ''}
         </td>
@@ -1092,25 +1131,34 @@ window.deleteUser = function (idx) {
     refreshUserTable();
   }
 }
-document.getElementById('formUser').onsubmit = function (e) {
+
+document.getElementById('formUser').onsubmit = async function (e) {
   e.preventDefault();
   const username = document.getElementById('userUsername').value.trim();
   const password = document.getElementById('userPassword').value.trim();
   const role = document.getElementById('userRole').value;
   const kategoriSelect = document.getElementById('userKategori');
   const kategoriAkses = Array.from(kategoriSelect.selectedOptions).map(opt => opt.value);
+
   let users = getUsers();
   if (users.find(u => u.username === username)) return alert("Username sudah ada!");
-  users.push({
+
+  const userObj = {
     username,
     password,
     role,
     kategoriAkses
-  });
+  };
+  users.push(userObj);
   setUsers(users);
   document.getElementById('formUser').reset();
   refreshUserTable();
+
+  // Kirim ke Sheet Pass saja (bukan Auth)
+  tambahUserKeSheetPass(userObj);
 }
+
+
 // Isi select kategori secara dinamis dari master barang
 function refreshKategoriUserSelect() {
   const barang = getData('barang');
@@ -1231,12 +1279,11 @@ function getCurrentUser() {
   return JSON.parse(localStorage.getItem('current_user') || 'null');
 }
 
-function getUsers() {
-  return JSON.parse(localStorage.getItem('users') || '[]');
-}
-
 function setUsers(users) {
   localStorage.setItem('users', JSON.stringify(users));
+}
+function getUsers() {
+  return JSON.parse(localStorage.getItem('users') || '[]');
 }
 
 window.kembalikanPinjaman = async function (idx) {
@@ -1256,8 +1303,6 @@ window.kembalikanPinjaman = async function (idx) {
 }
 
 // panggil cekAksesUI() setelah login & tab aktif
-
-const SHEET_ID = '1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI'; // ganti sesuai ID Anda
 
 function doPost(e) {
   try {
@@ -1400,6 +1445,7 @@ function updateUserInfo() {
 function logout() {
   CURRENT_USER = null;
   setCurrentUser(null);
+  // localStorage.removeItem('users'); // Boleh dihapus kalau mau selalu reload users dari Sheet saat login
   updateUserInfo();
   cekAksesUI();
   showLoginModal();
@@ -1522,10 +1568,39 @@ document.querySelector('a[href="#laporan"]').addEventListener('shown.bs.tab', fu
   renderChartAset();
 });
 
+
+
+async function fetchAllUsers() {
+  const res = await fetch(AUTH_API_URL);
+  return await res.json(); // array
+}
+
+
+// Fungsi simpan user ke Sheet "Pass" via GAS (POST)
+async function tambahUserKeSheetPass(userObj) {
+  const payload = {
+    username: userObj.username,
+    password: userObj.password,
+    role: userObj.role,
+    kategoriAkses: (userObj.kategoriAkses || []).join(',')
+  };
+  try {
+    await fetch(PASS_SHEET_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors'
+    });
+    showToast('User juga dikirim ke Sheet Pass!', 'success');
+  } catch (err) {
+    showToast('Gagal sync user ke Sheet Pass! ' + err.message, 'danger');
+  }
+}
+
+
 // --- BATAS: INIT DOMContentLoaded ---
 
 window.addEventListener('DOMContentLoaded', () => {
-  ensureDefaultAdmin();
   // Ambil current user dari localStorage
   CURRENT_USER = getCurrentUser();
 

@@ -341,7 +341,7 @@ document.getElementById('filterLaporanRuangan').onchange = function () {
 // ------- SINKRONISASI GOOGLE SHEETS -------
 
 // Ganti dengan URL Google Apps Script milik Anda
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxGfRMpev4TQmm75kNHX_73n0DqABpwvxhWS6pM67Gnz1d1OY4yXdtPK-wZoDHWrU1mHA/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOsD8nwHHpk7j-W65NDDDmFyZEDXi_QBBBnByeO6gAQRdBGUxvRAR7zL_Ii5oUut110Q/exec';
 
 document.getElementById('btnSyncSheet').onclick = async function () {
   const asetRuangan = getData('asetruangan');
@@ -352,22 +352,23 @@ document.getElementById('btnSyncSheet').onclick = async function () {
   // Format data untuk Google Sheets
   const now = new Date().toISOString();
   const data = asetRuangan.map(a => {
-    const b = barang.find(x => x.id === a.barangId) || {};
-    const r = ruangan.find(x => x.id === a.ruanganId) || {};
-    const bg = bangunan.find(x => x.id === r.bangunanId) || {};
-    return {
-      kode_barang: a.id, // atau b.kode jika ada kode unik barang
-      nama_barang: b.nama || '-',
-      kategori: b.kategori || '-',
-      spesifikasi: b.spesifikasi || '-',
-      jumlah: a.jumlah,
-      kondisi: a.kondisi,
-      catatan: a.catatan || '',
-      nama_ruangan: r.nama || '-',
-      nama_bangunan: bg.nama || '-',
-      timestamp: now // Timestamp sinkronisasi
-    }
-  });
+  const b = barang.find(x => x.id === a.barangId) || {};
+  const r = ruangan.find(x => x.id === a.ruanganId) || {};
+  const bg = bangunan.find(x => x.id === r.bangunanId) || {};
+  return {
+    kode_barang: a.id,
+    nama_barang: b.nama || '-',
+    kategori: b.kategori || '-',
+    spesifikasi: b.spesifikasi || '-',
+    kebutuhan: a.kebutuhan || 0,           // <-- TAMBAHKAN FIELD INI
+    jumlah: a.jumlah,
+    kondisi: a.kondisi,
+    catatan: a.catatan || '',
+    nama_ruangan: r.nama || '-',
+    nama_bangunan: bg.nama || '-',
+    timestamp: now
+  }
+});
 
   document.getElementById('syncResult').innerHTML = 'Menyinkronkan...';
 
@@ -545,12 +546,13 @@ document.getElementById('fileImportExcel').onchange = function (evt) {
           const r = ruangan.find(x => x.nama.trim().toLowerCase() === row[1].trim().toLowerCase());
           return {
             id: uuid(),
-            barangId: b ? b.id : '',
-            ruanganId: r ? r.id : '',
-            jumlah: parseInt(row[2]) || 0,
-            kondisi: row[3] || 'Baik',
-            catatan: row[4] || ''
-          }
+      barangId: b ? b.id : '',
+      ruanganId: r ? r.id : '',
+      jumlah: parseInt(row[2]) || 0,       // POSISI INDEX 2
+      kondisi: row[3] || 'Baik',
+      catatan: row[4] || '',
+      kebutuhan: parseInt(row[5]) || 0     // POSISI INDEX 5 !!!
+    }
         }).filter(a => a.barangId && a.ruanganId && a.jumlah);
       setData('asetruangan', asetruangan);
     }

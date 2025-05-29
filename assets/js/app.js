@@ -1023,8 +1023,8 @@ function cekAksesUI() {
   }
   // Tab dan panel untuk PEMINJAM
   if (CURRENT_USER.role === 'peminjam') {
-    if (tabDashboard) tabDashboard.style.display = '';
-    if (tabLaporan) tabLaporan.style.display = '';
+    if (tabDashboard) tabDashboard.style.display = 'none';
+    if (tabLaporan) tabLaporan.style.display = 'none';
     if (tabPinjam) tabPinjam.style.display = '';
     if (panelPinjam) panelPinjam.style.display = '';
   }

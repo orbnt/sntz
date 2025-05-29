@@ -151,19 +151,24 @@ function refreshAsetRuanganTable() {
 
   dataTampil.forEach(a => {
     const r = ruangan.find(x => x.id === a.ruanganId);
-    const b = barang.find(x => x.id === a.barangId);
-    tbody.innerHTML += `
-      <tr>
-        <td>${r ? r.nama : '-'}</td>
-        <td>${b ? b.nama : '-'}</td>
-        <td>${a.jumlah}</td>
-        <td>${a.kondisi}</td>
-        <td>${a.catatan || ''}</td>
-        <td>
-          <button class="btn btn-sm btn-warning" onclick="editAsetRuangan('${a.id}')">Edit</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteAsetRuangan('${a.id}')">Hapus</button>
-        </td>
-      </tr>
+  const b = barang.find(x => x.id === a.barangId);
+  const kebutuhan = a.kebutuhan || 0;
+  const jumlah = a.jumlah || 0;
+  const selisih = (kebutuhan ? (jumlah - kebutuhan) : 0);
+  tbody.innerHTML += `
+    <tr>
+      <td>${r ? r.nama : '-'}</td>
+      <td>${b ? b.nama : '-'}</td>
+      <td>${kebutuhan}</td>
+      <td>${jumlah}</td>
+      <td>${selisih}</td>
+      <td>${a.kondisi}</td>
+      <td>${a.catatan || ''}</td>
+      <td>
+        <button class="btn btn-sm btn-warning" onclick="editAsetRuangan('${a.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAsetRuangan('${a.id}')">Hapus</button>
+      </td>
+    </tr>
     `;
   });
 }
@@ -205,17 +210,19 @@ document.getElementById('formAsetRuangan').onsubmit = function (e) {
   const existing = asetRuangan.find(a => a.ruanganId === ruanganId && a.barangId === barangId);
 
   if (existing) {
-    existing.jumlah += jumlah;
-    existing.kondisi = kondisi;
-    existing.catatan = catatan;
+  existing.jumlah = jumlah;
+  existing.kebutuhan = parseInt(document.getElementById('kebutuhanAset').value) || 0;
+  existing.kondisi = kondisi;
+  existing.catatan = catatan;
   } else {
     asetRuangan.push({
-      id: uuid(),
-      ruanganId,
-      barangId,
-      jumlah,
-      kondisi,
-      catatan
+  id: uuid(),
+  ruanganId,
+  barangId,
+  kebutuhan: parseInt(document.getElementById('kebutuhanAset').value) || 0,
+  jumlah,
+  kondisi,
+  catatan
     });
   }
   setData('asetruangan', asetRuangan);
@@ -238,6 +245,7 @@ window.editAsetRuangan = function (id) {
   if (!data) return;
   document.getElementById('ruanganAset').value = data.ruanganId;
   document.getElementById('barangAset').value = data.barangId;
+  document.getElementById('kebutuhanAset').value = data.kebutuhan || 0;
   document.getElementById('jumlahAset').value = data.jumlah;
   document.getElementById('kondisiAset').value = data.kondisi;
   document.getElementById('catatanAset').value = data.catatan;
@@ -748,6 +756,60 @@ document.querySelector('a[href="#dashboard"]').addEventListener('shown.bs.tab', 
   dashboardStack = [];
   renderDashboard();
 });
+
+const DAFTAR_ASET_SHEET_URL = "https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Daftar%20Aset";
+
+document.getElementById('btnLaporanSelisih').onclick = async function () {
+  // Tampilkan loading
+  document.getElementById('isiModalSelisih').innerHTML = "Loading data dari Google Sheet...";
+  const modal = new bootstrap.Modal(document.getElementById('modalSelisihAset'));
+  modal.show();
+
+  // Ambil data dari sheet
+  const response = await fetch(DAFTAR_ASET_SHEET_URL);
+  const data = await response.json();
+  // Filter hanya yang punya selisih
+  const dataSelisih = data.filter(r => {
+    const kebutuhan = parseInt(r["Kebutuhan"]) || 0;
+    const jumlah = parseInt(r["Jumlah"]) || 0;
+    return kebutuhan > 0 && kebutuhan !== jumlah;
+  });
+
+  let html = "<div class='table-responsive'><table class='table table-bordered table-sm'><thead><tr>";
+  html += "<th>Nama Barang</th><th>Kategori</th><th>Spesifikasi</th><th>Ruangan</th><th>Bangunan</th><th>Kebutuhan</th><th>Aktual</th><th>Selisih</th><th>Kondisi</th><th>Catatan</th></tr></thead><tbody>";
+  dataSelisih.forEach(r => {
+    html += `<tr>
+      <td>${r["Nama Barang"]}</td>
+      <td>${r["Kategori"]}</td>
+      <td>${r["Spesifikasi"]}</td>
+      <td>${r["Nama Ruangan"]}</td>
+      <td>${r["Nama Bangunan"]}</td>
+      <td>${r["Kebutuhan"]||0}</td>
+      <td>${r["Jumlah"]||0}</td>
+      <td>${(parseInt(r["Jumlah"]||0)-(parseInt(r["Kebutuhan"])||0))}</td>
+      <td>${r["Kondisi"]}</td>
+      <td>${r["Catatan"]||''}</td>
+    </tr>`;
+  });
+  html += "</tbody></table></div>";
+  document.getElementById('isiModalSelisih').innerHTML = html;
+
+  // Untuk Export Excel Selisih
+  document.getElementById('btnExportSelisihExcel').onclick = function () {
+    const ws_data = [
+      ["Nama Barang", "Kategori", "Spesifikasi", "Ruangan", "Bangunan", "Kebutuhan", "Aktual", "Selisih", "Kondisi", "Catatan"],
+      ...dataSelisih.map(r => [
+        r["Nama Barang"], r["Kategori"], r["Spesifikasi"], r["Nama Ruangan"], r["Nama Bangunan"],
+        r["Kebutuhan"]||0, r["Jumlah"]||0, (parseInt(r["Jumlah"]||0)-(parseInt(r["Kebutuhan"])||0)), r["Kondisi"], r["Catatan"]||''
+      ])
+    ];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Selisih');
+    XLSX.writeFile(wb, 'Laporan_Selisih_Aset.xlsx');
+  };
+};
+
 
 // Ensure admin user exists
 function ensureDefaultAdmin() {

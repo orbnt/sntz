@@ -166,6 +166,10 @@
                                         <select id="barangAset" class="form-select" required></select>
                                     </div>
                                     <div class="mb-2">
+                                        <input type="number" min="0" id="kebutuhanAset" class="form-control"
+                                            placeholder="Kebutuhan Barang (target)">
+                                    </div>
+                                    <div class="mb-2">
                                         <input type="number" min="1" id="jumlahAset" class="form-control"
                                             placeholder="Jumlah" required>
                                     </div>
@@ -200,7 +204,9 @@
                                             <tr>
                                                 <th>Ruangan</th>
                                                 <th>Barang</th>
-                                                <th>Jumlah</th>
+                                                <th>Kebutuhan</th>
+                                                <th>Aktual</th>
+                                                <th>Selisih</th>
                                                 <th>Kondisi</th>
                                                 <th>Catatan</th>
                                                 <th>Aksi</th>
@@ -222,6 +228,23 @@
                             <div class="mb-2 d-flex gap-2">
                                 <button class="btn btn-success btn-sm" id="btnExportExcel">Export Excel</button>
                                 <button class="btn btn-danger btn-sm" id="btnExportPDF">Export PDF</button>
+                                <button class="btn btn-warning btn-sm" id="btnLaporanSelisih">Laporan Selisih</button>
+                            </div>
+                            <!-- Modal tampilkan data selisih -->
+                            <div class="modal fade" id="modalSelisihAset" tabindex="-1">
+                                <div class="modal-dialog modal-xl">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Laporan Aset Berselisih</h5>
+                                        </div>
+                                        <div class="modal-body" id="isiModalSelisih"></div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-success" id="btnExportSelisihExcel">Export Selisih ke
+                                                Excel</button>
+                                            <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="card-header bg-secondary text-white">Rekap Total Barang</div>
                             <div class="mb-2">

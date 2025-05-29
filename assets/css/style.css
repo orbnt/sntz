@@ -39,3 +39,34 @@ body { background: #f6f7fa; }
 #userSection form#formUser button[type="submit"] {
   width: 100%;
 }
+
+/* Khusus Flex Responsive Manajemen User */
+.user-flex-form {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+@media (min-width: 992px) {
+  /* Desktop: tetap horizontal */
+  .user-flex-form > div {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 991.98px) {
+  /* Mobile: vertikal */
+  .user-flex-form {
+    flex-direction: column !important;
+  }
+  .user-flex-form > div {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .user-flex-form button[type="submit"] {
+    width: 100% !important;
+  }
+}
+

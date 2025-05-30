@@ -818,14 +818,23 @@ document.getElementById('btnLaporanSelisih').onclick = async function () {
 };
 
 
-// Login Modal Show/Hide
+let loginModalBS; // global var untuk modal instance
+
 function showLoginModal() {
-  document.getElementById('loginModal').style.display = 'block';
+  // Cek jika sudah ada instance, jika tidak buat baru
+  if (!loginModalBS) {
+    loginModalBS = new bootstrap.Modal(document.getElementById('loginModal'));
+  }
+  loginModalBS.show();
 }
 
 function hideLoginModal() {
-  document.getElementById('loginModal').style.display = 'none';
+  if (!loginModalBS) {
+    loginModalBS = new bootstrap.Modal(document.getElementById('loginModal'));
+  }
+  loginModalBS.hide();
 }
+
 
 // Init CURRENT_USER from localStorage
 let CURRENT_USER = getCurrentUser();

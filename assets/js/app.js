@@ -1,6 +1,6 @@
 // --- MASTER DATA --- //
 const SHEET_ID = '1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI';
-const AUTH_API_URL = `https://opensheet.vercel.app/${SHEET_ID}/Auth`; // Untuk GET data user (login)
+const AUTH_API_URL = `https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Auth`; // Untuk GET data user (login)
 const PASS_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJbc9KbBN9jfVDpfHTFXvUm4OOqjlWRgDd1paHFZRB63OQ4k4bLkfSk0tCrji3BRs/exec'; // Untuk POST user baru
 
 

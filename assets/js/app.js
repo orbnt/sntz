@@ -79,40 +79,190 @@ function setData(key, data) {
   LS.setItem(key, JSON.stringify(data));
 }
 
+function renderPaging(current, maxPage, setPageFuncName) {
+  if (maxPage <= 1) return '';
+  let html = '<nav><ul class="pagination pagination-sm mb-0">';
+
+  // Prev
+  html += `<li class="page-item ${current === 1 ? 'disabled' : ''}">
+    <button class="page-link" onclick="${setPageFuncName}(${current-1})" ${current===1?'disabled':''}>&laquo; Prev</button>
+  </li>`;
+
+  // Numbering with ellipsis
+  let pages = [];
+  if (maxPage <= 7) {
+    for (let i=1; i<=maxPage; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (current > 4) pages.push('...');
+    for (let i = Math.max(2, current-1); i <= Math.min(maxPage-1, current+1); i++) {
+      pages.push(i);
+    }
+    if (current < maxPage-3) pages.push('...');
+    pages.push(maxPage);
+  }
+
+  pages.forEach(p => {
+    if (p === '...') {
+      html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    } else {
+      html += `<li class="page-item ${p === current ? 'active' : ''}">
+        <button class="page-link" onclick="${setPageFuncName}(${p})">${p}</button>
+      </li>`;
+    }
+  });
+
+  // Next
+  html += `<li class="page-item ${current === maxPage ? 'disabled' : ''}">
+    <button class="page-link" onclick="${setPageFuncName}(${current+1})" ${current===maxPage?'disabled':''}>Next &raquo;</button>
+  </li>`;
+
+  html += '</ul></nav>';
+  return html;
+}
+
+let bangunanCurrentPage = 1;
+
+// Fungsi pencarian
+function filterBangunanData(data, keyword) {
+  if (!keyword) return data;
+  keyword = keyword.toLowerCase();
+  return data.filter(row =>
+    Object.values(row).some(val => (val || '').toString().toLowerCase().includes(keyword))
+  );
+}
+
 function refreshBangunan() {
   const bangunan = getData('bangunan');
   const list = document.getElementById('listBangunan');
   const select = document.getElementById('bangunanRuang');
+  const showCount = parseInt(document.getElementById('bangunanShowCount')?.value || 10);
+  const searchKeyword = document.getElementById('bangunanSearchAll')?.value || '';
   list.innerHTML = '';
   select.innerHTML = '<option value="">Pilih Bangunan</option>';
-  bangunan.forEach(b => {
+
+  // Search
+  let dataTampil = filterBangunanData(bangunan, searchKeyword);
+
+  // Paging
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (bangunanCurrentPage > maxPage) bangunanCurrentPage = 1;
+  const startIdx = (bangunanCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
+  rowsPage.forEach(b => {
     list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
       ${b.nama}
       <button class="btn btn-sm btn-danger" onclick="deleteBangunan('${b.id}')">Hapus</button>
     </li>`;
     select.innerHTML += `<option value="${b.id}">${b.nama}</option>`;
   });
+
+  // Paging control
+  document.getElementById('bangunanPaging').innerHTML =
+  renderPaging(ruanganCurrentPage, maxPage, 'setBangunanPage');
+}
+
+window.setBangunanPage = function(page) {
+  bangunanCurrentPage = page;
+  refreshBangunan();
+}
+
+document.getElementById('bangunanShowCount').onchange = function () {
+  bangunanCurrentPage = 1;
+  refreshBangunan();
+};
+document.getElementById('bangunanSearchAll').oninput = function () {
+  bangunanCurrentPage = 1;
+  refreshBangunan();
+};
+
+
+let ruanganCurrentPage = 1;
+
+function filterRuanganData(data, keyword) {
+  if (!keyword) return data;
+  keyword = keyword.toLowerCase();
+  return data.filter(row =>
+    Object.values(row).some(val => (val || '').toString().toLowerCase().includes(keyword))
+  );
 }
 
 function refreshRuangan() {
   const ruangan = getData('ruangan');
   const bangunan = getData('bangunan');
   const list = document.getElementById('listRuangan');
+  const showCount = parseInt(document.getElementById('ruanganShowCount')?.value || 10);
+  const searchKeyword = document.getElementById('ruanganSearchAll')?.value || '';
   list.innerHTML = '';
-  ruangan.forEach(r => {
-    const namaBangunan = bangunan.find(b => b.id === r.bangunanId) ?.nama || '-';
+
+  // Search
+  let dataTampil = filterRuanganData(ruangan, searchKeyword);
+
+  // Paging
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (ruanganCurrentPage > maxPage) ruanganCurrentPage = 1;
+  const startIdx = (ruanganCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
+  rowsPage.forEach(r => {
+    const namaBangunan = bangunan.find(b => b.id === r.bangunanId)?.nama || '-';
     list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
       <span>${namaBangunan} - ${r.nama}</span>
       <button class="btn btn-sm btn-danger" onclick="deleteRuangan('${r.id}')">Hapus</button>
     </li>`;
   });
+
+  // Paging control
+  document.getElementById('ruanganPaging').innerHTML =
+  renderPaging(ruanganCurrentPage, maxPage, 'setRuanganPage');
+}
+
+window.setRuanganPage = function(page) {
+  ruanganCurrentPage = page;
+  refreshRuangan();
+}
+
+document.getElementById('ruanganShowCount').onchange = function () {
+  ruanganCurrentPage = 1;
+  refreshRuangan();
+};
+document.getElementById('ruanganSearchAll').oninput = function () {
+  ruanganCurrentPage = 1;
+  refreshRuangan();
+};
+
+
+let barangCurrentPage = 1;
+
+function filterBarangData(data, keyword) {
+  if (!keyword) return data;
+  keyword = keyword.toLowerCase();
+  return data.filter(row =>
+    Object.values(row).some(val => (val || '').toString().toLowerCase().includes(keyword))
+  );
 }
 
 function refreshBarang() {
   const barang = getData('barang');
   const list = document.getElementById('listBarang');
+  const showCount = parseInt(document.getElementById('barangShowCount')?.value || 10);
+  const searchKeyword = document.getElementById('barangSearchAll')?.value || '';
   list.innerHTML = '';
-  barang.forEach(b => {
+
+  // Search
+  let dataTampil = filterBarangData(barang, searchKeyword);
+
+  // Paging
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (barangCurrentPage > maxPage) barangCurrentPage = 1;
+  const startIdx = (barangCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
+  rowsPage.forEach(b => {
     list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
       <span>
         <b>${b.nama}</b> 
@@ -122,7 +272,26 @@ function refreshBarang() {
       <button class="btn btn-sm btn-danger" onclick="deleteBarang('${b.id}')">Hapus</button>
     </li>`;
   });
+
+  // Paging control
+  document.getElementById('barangPaging').innerHTML =
+  renderPaging(barangCurrentPage, maxPage, 'setBarangPage');
 }
+
+window.setBarangPage = function(page) {
+  barangCurrentPage = page;
+  refreshBarang();
+}
+
+document.getElementById('barangShowCount').onchange = function () {
+  barangCurrentPage = 1;
+  refreshBarang();
+};
+document.getElementById('barangSearchAll').oninput = function () {
+  barangCurrentPage = 1;
+  refreshBarang();
+};
+
 
 // CRUD Bangunan
 document.getElementById('formBangunan').onsubmit = function (e) {
@@ -208,42 +377,95 @@ window.deleteBarang = function (id) {
 }
 
 // --------- ASETRUANGAN (MAPPING BARANG KE RUANGAN) -------------
+let asetCurrentPage = 1;
+
+function filterAsetRuanganData(data, keyword, barang, filterRuangan, filterKondisi) {
+  // Filter ruangan dan kondisi
+  if (filterRuangan && filterRuangan !== 'all') {
+    data = data.filter(a => a.ruanganId === filterRuangan);
+  }
+  if (filterKondisi) {
+    data = data.filter(a => (a.kondisi || '').toLowerCase() === filterKondisi.toLowerCase());
+  }
+  // Search by barang
+  if (keyword) {
+    data = data.filter(a => {
+      const b = barang.find(x => x.id === a.barangId);
+      return b && b.nama && b.nama.toLowerCase().includes(keyword.toLowerCase());
+    });
+  }
+  return data;
+}
+
 function refreshAsetRuanganTable() {
   const asetRuangan = getData('asetruangan');
   const ruangan = getData('ruangan');
   const barang = getData('barang');
   const filterId = document.getElementById('filterRuanganAset').value;
+  const filterKondisi = document.getElementById('filterKondisiAset') ? document.getElementById('filterKondisiAset').value : '';
+  const searchKeyword = document.getElementById('searchAsetRuangan') ? document.getElementById('searchAsetRuangan').value.toLowerCase() : '';
   const tbody = document.querySelector('#tabelAsetRuangan tbody');
   tbody.innerHTML = '';
 
-  let dataTampil = asetRuangan;
-  if (filterId && filterId !== 'all') {
-    dataTampil = asetRuangan.filter(a => a.ruanganId === filterId);
-  }
+  let dataTampil = filterAsetRuanganData(asetRuangan, searchKeyword, barang, filterId, filterKondisi);
 
-  dataTampil.forEach(a => {
+  // Paging
+  const showCount = parseInt(document.getElementById('asetShowCount')?.value || 10);
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (asetCurrentPage > maxPage) asetCurrentPage = 1;
+  const startIdx = (asetCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
+  rowsPage.forEach(a => {
     const r = ruangan.find(x => x.id === a.ruanganId);
-  const b = barang.find(x => x.id === a.barangId);
-  const kebutuhan = a.kebutuhan || 0;
-  const jumlah = a.jumlah || 0;
-  const selisih = (kebutuhan ? (jumlah - kebutuhan) : 0);
-  tbody.innerHTML += `
-    <tr>
-      <td>${r ? r.nama : '-'}</td>
-      <td>${b ? b.nama : '-'}</td>
-      <td>${kebutuhan}</td>
-      <td>${jumlah}</td>
-      <td>${selisih}</td>
-      <td>${a.kondisi}</td>
-      <td>${a.catatan || ''}</td>
-      <td>
-        <button class="btn btn-sm btn-warning" onclick="editAsetRuangan('${a.id}')">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteAsetRuangan('${a.id}')">Hapus</button>
-      </td>
-    </tr>
+    const b = barang.find(x => x.id === a.barangId);
+    const kebutuhan = a.kebutuhan || 0;
+    const jumlah = a.jumlah || 0;
+    const selisih = (kebutuhan ? (jumlah - kebutuhan) : 0);
+    tbody.innerHTML += `
+      <tr>
+        <td>${r ? r.nama : '-'}</td>
+        <td>${b ? b.nama : '-'}</td>
+        <td>${kebutuhan}</td>
+        <td>${jumlah}</td>
+        <td>${selisih}</td>
+        <td>${a.kondisi}</td>
+        <td>${a.catatan || ''}</td>
+        <td>
+          <button class="btn btn-sm btn-warning" onclick="editAsetRuangan('${a.id}')">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteAsetRuangan('${a.id}')">Hapus</button>
+        </td>
+      </tr>
     `;
   });
+
+  // Paging control with ellipsis
+document.getElementById('asetPaging').innerHTML = renderPaging(asetCurrentPage, maxPage);
 }
+
+window.setAsetPage = function(page) {
+  asetCurrentPage = page;
+  refreshAsetRuanganTable();
+}
+
+// Event handler paging/filter
+document.getElementById('asetShowCount').onchange = function () {
+  asetCurrentPage = 1;
+  refreshAsetRuanganTable();
+};
+document.getElementById('filterRuanganAset').onchange = function () {
+  asetCurrentPage = 1;
+  refreshAsetRuanganTable();
+};
+document.getElementById('filterKondisiAset').onchange = function () {
+  asetCurrentPage = 1;
+  refreshAsetRuanganTable();
+};
+document.getElementById('searchAsetRuangan').oninput = function () {
+  asetCurrentPage = 1;
+  refreshAsetRuanganTable();
+};
 
 function refreshRuanganAsetDropdowns() {
   const ruangan = getData('ruangan');
@@ -353,33 +575,124 @@ document.querySelector('a[href="#aset"]').addEventListener('shown.bs.tab', funct
   refreshRuanganAsetDropdowns();
   refreshBarangAsetDropdown();
   refreshAsetRuanganTable();
-});
 
+  const elFilterKondisi = document.getElementById('filterKondisiAset');
+if (elFilterKondisi) elFilterKondisi.onchange = refreshAsetRuanganTable;
+
+const elSearchAset = document.getElementById('searchAsetRuangan');
+if (elSearchAset) elSearchAset.oninput = refreshAsetRuanganTable;
+
+});
 // --------- PELAPORAN ---------
 
 // Rekap total barang semua ruangan
+let rekapCurrentPage = 1;
+
 function refreshTabelRekapBarang() {
   const barang = getData('barang');
   const asetRuangan = getData('asetruangan');
   const tbody = document.querySelector('#tabelRekapBarang tbody');
   tbody.innerHTML = '';
 
-  barang.forEach(b => {
-    // Cari semua asetRuangan dengan barangId ini
+  // Baca filter kategori dari select
+  const selKategori = document.getElementById('filterKategoriRekap');
+  const filterKategori = selKategori ? selKategori.value : '';
+  const searchKeyword = document.getElementById('searchRekap')?.value?.toLowerCase() || '';
+
+  // Kumpulkan data tampil
+  let dataTampil = barang.map(b => {
     const total = asetRuangan.filter(a => a.barangId === b.id)
       .reduce((sum, a) => sum + (parseInt(a.jumlah) || 0), 0);
-    if (total > 0) {
-      tbody.innerHTML += `
-                <tr>
-                    <td>${b.nama}</td>
-                    <td>${b.kategori || '-'}</td>
-                    <td>${b.spesifikasi || '-'}</td>
-                    <td>${total}</td>
-                </tr>
-            `;
-    }
+    return {
+      ...b,
+      total
+    };
+  }).filter(b => b.total > 0);
+
+  // Filter kategori
+  if (filterKategori) dataTampil = dataTampil.filter(b => b.kategori === filterKategori);
+  // Filter search
+  if (searchKeyword) dataTampil = dataTampil.filter(b => b.nama.toLowerCase().includes(searchKeyword));
+
+  // Paging
+  const showCount = parseInt(document.getElementById('rekapShowCount')?.value || 10);
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (rekapCurrentPage > maxPage) rekapCurrentPage = 1;
+  const startIdx = (rekapCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
+  // Tampilkan data
+  rowsPage.forEach(b => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${b.nama}</td>
+        <td>${b.kategori || '-'}</td>
+        <td>${b.spesifikasi || '-'}</td>
+        <td>${b.total}</td>
+      </tr>
+    `;
+  });
+
+  // Paging control
+  document.getElementById('rekapPaging').innerHTML = renderPaging(rekapCurrentPage, maxPage);
+}
+
+window.setRekapPage = function(page) {
+  if (page < 1) page = 1;
+  rekapCurrentPage = page;
+  refreshTabelRekapBarang();
+}
+
+document.getElementById('rekapShowCount').onchange = function () {
+  rekapCurrentPage = 1;
+  refreshTabelRekapBarang();
+};
+document.getElementById('filterKategoriRekap').onchange = function () {
+  rekapCurrentPage = 1;
+  refreshTabelRekapBarang();
+};
+document.getElementById('searchRekap').oninput = function () {
+  rekapCurrentPage = 1;
+  refreshTabelRekapBarang();
+};
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  const selKategori = document.getElementById('filterKategoriRekap');
+  if (selKategori) {
+    selKategori.onchange = function () {
+      refreshTabelRekapBarang();
+    };
+  }
+});
+
+function refreshFilterKategoriRekap() {
+  const barang = getData('barang');
+  const kategoriSet = new Set(barang.map(b => b.kategori).filter(Boolean));
+  const selKategori = document.getElementById('filterKategoriRekap');
+  if (!selKategori) return;
+  const current = selKategori.value || '';
+  selKategori.innerHTML = '<option value="">Semua Kategori</option>';
+  Array.from(kategoriSet).forEach(kat => {
+    selKategori.innerHTML += `<option value="${kat}"${current === kat ? ' selected' : ''}>${kat}</option>`;
+  });
+  selKategori.value = current;
+}
+
+
+function isiFilterKategoriRekap() {
+  const barang = getData('barang');
+  const kategoriSet = new Set(barang.map(b => b.kategori).filter(Boolean));
+  const sel = document.getElementById('filterKategoriRekap');
+  sel.innerHTML = '<option value="">Semua Kategori</option>';
+  Array.from(kategoriSet).forEach(kat => {
+    sel.innerHTML += `<option value="${kat}">${kat}</option>`;
   });
 }
+document.getElementById('filterKategoriRekap').onchange = function () {
+  refreshTabelRekapBarang();
+};
 
 // Filter ruangan untuk laporan
 function refreshFilterLaporanRuangan() {
@@ -422,6 +735,13 @@ document.querySelector('a[href="#laporan"]').addEventListener('shown.bs.tab', fu
   refreshTabelRekapBarang();
   refreshFilterLaporanRuangan();
   refreshTabelBarangPerRuangan();
+  refreshFilterKategoriRekap();
+
+  // PASANG event handler lagi (setiap tab dibuka)
+  const selKategori = document.getElementById('filterKategoriRekap');
+  if (selKategori) {
+    selKategori.onchange = refreshTabelRekapBarang;
+  }
 });
 // Event jika ganti ruangan
 document.getElementById('filterLaporanRuangan').onchange = function () {
@@ -1170,27 +1490,67 @@ function cekAkses() {
   // Tab Peminjaman/Pengembalian: semua
 }
 
+
+let userCurrentPage = 1;
+
+// Filter user sesuai keyword pencarian
+function filterUserData(users, keyword) {
+  if (!keyword) return users;
+  return users.filter(u => (u.username || '').toLowerCase().includes(keyword.toLowerCase()));
+}
+
+// Paging dan render tabel user
 function refreshUserTable() {
   const users = getUsers();
   const tbody = document.querySelector('#tabelUser tbody');
+  const searchKeyword = document.getElementById('searchUser')?.value.toLowerCase() || '';
+  const showCount = parseInt(document.getElementById('userShowCount')?.value || 10);
+
+  let dataTampil = filterUserData(users, searchKeyword);
+
+  // Paging
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (userCurrentPage > maxPage) userCurrentPage = 1;
+  const startIdx = (userCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
   tbody.innerHTML = '';
-  users.forEach((u, i) => {
+  rowsPage.forEach((u, i) => {
     tbody.innerHTML += `
       <tr>
         <td>${u.username}</td>
         <td>${u.role}</td>
         <td>${
-  Array.isArray(u.kategoriAkses)
-    ? u.kategoriAkses.join(', ')
-    : (typeof u.kategoriAkses === 'string' ? u.kategoriAkses : '')
-}</td>
+          Array.isArray(u.kategoriAkses)
+            ? u.kategoriAkses.join(', ')
+            : (typeof u.kategoriAkses === 'string' ? u.kategoriAkses : '')
+        }</td>
         <td>
-          ${u.username !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${i})">Hapus</button>` : ''}
+          ${u.username !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${getUsers().findIndex(x=>x.username===u.username)})">Hapus</button>` : ''}
         </td>
       </tr>
     `;
   });
+
+  document.getElementById('userPaging').innerHTML = renderPaging(userCurrentPage, maxPage, 'setUserPage');
 }
+
+window.setUserPage = function(page) {
+  userCurrentPage = page;
+  refreshUserTable();
+}
+
+// Event handler untuk search dan paging
+document.getElementById('userShowCount').onchange = function () {
+  userCurrentPage = 1;
+  refreshUserTable();
+};
+document.getElementById('searchUser').oninput = function () {
+  userCurrentPage = 1;
+  refreshUserTable();
+};
+
 
 window.deleteUser = function (idx) {
   let users = getUsers();
@@ -1537,20 +1897,65 @@ function logAudit(action, detail) {
   localStorage.setItem('audit_logs', JSON.stringify(logs));
 }
 
+
+let auditLogCurrentPage = 1;
+
+// Filter audit log sesuai keyword
+function filterAuditLogData(logs, keyword) {
+  if (!keyword) return logs;
+  return logs.filter(log =>
+    (log.user || '').toLowerCase().includes(keyword) ||
+    (log.action || '').toLowerCase().includes(keyword) ||
+    (log.detail || '').toLowerCase().includes(keyword)
+  );
+}
+
+// Paging dan render tabel Audit Log
 function refreshAuditLogTable() {
   const logs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
   const tbody = document.querySelector('#tabelAuditLog tbody');
+  const searchKeyword = document.getElementById('searchAuditLog')?.value.toLowerCase() || '';
+  const showCount = parseInt(document.getElementById('auditLogShowCount')?.value || 10);
+
+  let dataTampil = filterAuditLogData(logs, searchKeyword);
+
+  // Paging
+  const totalRows = dataTampil.length;
+  const maxPage = Math.ceil(totalRows / showCount);
+  if (auditLogCurrentPage > maxPage) auditLogCurrentPage = 1;
+  const startIdx = (auditLogCurrentPage - 1) * showCount;
+  const rowsPage = dataTampil.slice(startIdx, startIdx + showCount);
+
   tbody.innerHTML = '';
-  logs.forEach(log => {
+  rowsPage.forEach(log => {
     tbody.innerHTML += `
-            <tr>
-                <td>${new Date(log.timestamp).toLocaleString()}</td>
-                <td>${log.user}</td>
-                <td>${log.action}</td>
-                <td>${log.detail}</td>
-            </tr>`;
+      <tr>
+        <td>${new Date(log.timestamp).toLocaleString()}</td>
+        <td>${log.user}</td>
+        <td>${log.action}</td>
+        <td>${log.detail}</td>
+      </tr>
+    `;
   });
+
+  document.getElementById('auditLogPaging').innerHTML = renderPaging(auditLogCurrentPage, maxPage, 'setAuditLogPage');
 }
+
+window.setAuditLogPage = function(page) {
+  auditLogCurrentPage = page;
+  refreshAuditLogTable();
+}
+
+// Event handler untuk search dan paging
+document.getElementById('auditLogShowCount').onchange = function () {
+  auditLogCurrentPage = 1;
+  refreshAuditLogTable();
+};
+document.getElementById('searchAuditLog').oninput = function () {
+  auditLogCurrentPage = 1;
+  refreshAuditLogTable();
+};
+
 
 function refreshApprovalTable() {
   if (!CURRENT_USER || CURRENT_USER.role !== 'admin') return;
@@ -1698,4 +2103,5 @@ window.addEventListener('DOMContentLoaded', () => {
   refreshBangunan();
   refreshRuangan();
   refreshBarang();
+  refreshFilterKategoriRekap();
 });

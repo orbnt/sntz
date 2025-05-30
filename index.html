@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
 
 </head>
+
 <body>
     <!-- Navbar Brand -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
@@ -101,7 +102,27 @@
                                     <button type="submit" class="btn btn-success w-100">Tambah</button>
                                 </form>
                                 <hr>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <label>
+                                            Tampilkan
+                                            <select id="bangunanShowCount"
+                                                class="form-select form-select-sm d-inline-block" style="width:auto;">
+                                                <option value="10">10</option>
+                                                <option value="30">30</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            data
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <input type="text" id="bangunanSearchAll" class="form-control form-control-sm"
+                                            placeholder="Cari Bangunan...">
+                                    </div>
+                                </div>
                                 <ul id="listBangunan" class="list-group small"></ul>
+                                <div id="bangunanPaging" class="mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -120,7 +141,27 @@
                                     <button type="submit" class="btn btn-info w-100">Tambah</button>
                                 </form>
                                 <hr>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <label>
+                                            Tampilkan
+                                            <select id="ruanganShowCount"
+                                                class="form-select form-select-sm d-inline-block" style="width:auto;">
+                                                <option value="10">10</option>
+                                                <option value="30">30</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            data
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <input type="text" id="ruanganSearchAll" class="form-control form-control-sm"
+                                            placeholder="Cari Ruangan...">
+                                    </div>
+                                </div>
                                 <ul id="listRuangan" class="list-group small"></ul>
+                                <div id="ruanganPaging" class="mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -144,7 +185,27 @@
                                     <button type="submit" class="btn btn-warning w-100">Tambah</button>
                                 </form>
                                 <hr>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <label>
+                                            Tampilkan
+                                            <select id="barangShowCount"
+                                                class="form-select form-select-sm d-inline-block" style="width:auto;">
+                                                <option value="10">10</option>
+                                                <option value="30">30</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            data
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <input type="text" id="barangSearchAll" class="form-control form-control-sm"
+                                            placeholder="Cari Barang...">
+                                    </div>
+                                </div>
                                 <ul id="listBarang" class="list-group small"></ul>
+                                <div id="barangPaging" class="mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -194,8 +255,38 @@
                         <div class="card">
                             <div class="card-header bg-secondary text-white">Daftar Aset di Ruangan</div>
                             <div class="card-body p-2">
-                                <div class="mb-3">
-                                    <select id="filterRuanganAset" class="form-select"></select>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4">
+                                        <select id="filterRuanganAset" class="form-select"></select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="filterKondisiAset" class="form-select">
+                                            <option value="">Semua Kondisi</option>
+                                            <option>Baik</option>
+                                            <option>Rusak</option>
+                                            <option>Diperbaiki</option>
+                                            <option>Hilang</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" id="searchAsetRuangan" class="form-control"
+                                            placeholder="Cari Nama Barang...">
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <label>
+                                            Tampilkan
+                                            <select id="asetShowCount" class="form-select form-select-sm d-inline-block"
+                                                style="width:auto;">
+                                                <option value="10">10</option>
+                                                <option value="30">30</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            data
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-striped" id="tabelAsetRuangan">
@@ -214,6 +305,7 @@
                                         <tbody></tbody>
                                     </table>
                                 </div>
+                                <div id="asetPaging" class="mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -247,10 +339,27 @@
                             </div>
                             <div class="card-header bg-secondary text-white">Rekap Total Barang</div>
                             <div class="mb-2">
-                                <input type="text" id="searchRekap" class="form-control form-control-sm"
-                                    placeholder="Cari Nama Barang...">
+                                <input type="text" id="searchRekap" class="form-control form-control-sm">
+                                <select id="filterKategoriRekap" class="form-select form-select-sm mt-2">
+                                    <option value="">Semua Kategori</option>
+                                </select>
                             </div>
                             <div class="card-body p-2">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <label>
+                                            Tampilkan
+                                            <select id="rekapShowCount"
+                                                class="form-select form-select-sm d-inline-block" style="width:auto;">
+                                                <option value="10">10</option>
+                                                <option value="30">30</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            data
+                                        </label>
+                                    </div>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered" id="tabelRekapBarang">
                                         <thead>
@@ -264,6 +373,7 @@
                                         <tbody></tbody>
                                     </table>
                                 </div>
+                                <div id="rekapPaging" class="mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -347,6 +457,23 @@
                                     <tbody></tbody>
                                 </table>
                             </div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div>
+                                    Tampilkan
+                                    <select id="userShowCount" class="form-select form-select-sm d-inline-block"
+                                        style="width:auto;">
+                                        <option value="10">10</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    data
+                                </div>
+                                <input type="text" id="searchUser"
+                                    class="form-control form-control-sm d-inline-block ms-2" style="width:200px;"
+                                    placeholder="Cari Username...">
+                            </div>
+                            <div id="userPaging" class="mt-2"></div>
                         </div>
                     </div>
                     <!-- Approval Table: hanya admin -->
@@ -413,17 +540,30 @@
                                 <tbody></tbody>
                             </table>
                         </div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+  <div>
+    Tampilkan
+    <select id="auditLogShowCount" class="form-select form-select-sm d-inline-block" style="width:auto;">
+      <option value="10">10</option>
+      <option value="30">30</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
+    data
+  </div>
+  <input type="text" id="searchAuditLog" class="form-control form-control-sm d-inline-block ms-2" style="width:200px;" placeholder="Cari...">
+</div>
+<div id="auditLogPaging" class="mt-2"></div>
                     </div>
                 </div>
             </div>
 
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <div id="toast-container" style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 1080;"></div>
+    <script src="assets/js/app.js"></script>
 </body>
 
 </html>

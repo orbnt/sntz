@@ -3,6 +3,23 @@ const SHEET_ID = '1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI';
 const AUTH_API_URL = `https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Auth`; // Untuk GET data user (login)
 const PASS_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJbc9KbBN9jfVDpfHTFXvUm4OOqjlWRgDd1paHFZRB63OQ4k4bLkfSk0tCrji3BRs/exec'; // Untuk POST user baru
 
+let loginModalBS;
+
+function showLoginModal() {
+  if (!loginModalBS) {
+    const el = document.getElementById('loginModal');
+    if (el) loginModalBS = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
+  }
+  if (loginModalBS) loginModalBS.show();
+}
+
+function hideLoginModal() {
+  if (!loginModalBS) {
+    const el = document.getElementById('loginModal');
+    if (el) loginModalBS = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
+  }
+  if (loginModalBS) loginModalBS.hide();
+}
 
 const LS = window.localStorage;
 
@@ -817,26 +834,6 @@ document.getElementById('btnLaporanSelisih').onclick = async function () {
   };
 };
 
-
-let loginModalBS;
-
-function showLoginModal() {
-  if (!loginModalBS) {
-    const el = document.getElementById('loginModal');
-    if (el) loginModalBS = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
-  }
-  if (loginModalBS) loginModalBS.show();
-}
-
-function hideLoginModal() {
-  if (!loginModalBS) {
-    const el = document.getElementById('loginModal');
-    if (el) loginModalBS = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
-  }
-  if (loginModalBS) loginModalBS.hide();
-}
-
-
 // Init CURRENT_USER from localStorage
 let CURRENT_USER = getCurrentUser();
 
@@ -895,6 +892,7 @@ document.getElementById('formLogin').onsubmit = async function (e) {
   if (user) {
     CURRENT_USER = user;
     setCurrentUser(user);
+    console.log('Login sukses, hide modal!');
     hideLoginModal();
     updateUserInfo();
     cekAksesUI();

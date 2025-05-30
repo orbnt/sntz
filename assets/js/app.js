@@ -24,6 +24,9 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOsD8nwHHpk7
 const PINJAM_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8i7CXrMj8zpBf7X6wn_24TBhEsvgQWY6-PcyrF1p3Q6muQ4TPgcr6wYwpXxo0erXB/exec';
 const PASS_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvqkYuGGsEKPyWGnCwyOUpi7yaYJEm8xV7M6kZfaxkMeWSGt2VAtJyBuUKoLPT120/exec';
 
+const TELEGRAM_BOT_TOKEN = '7520083448:AAHbf4QgZurXd8gbI2OnM0PxD8jK_zAXJ08';
+const TELEGRAM_CHAT_ID = '968137878';
+
 
 function parseSheetRows(values) {
   if (!values || values.length === 0) return [];
@@ -1352,6 +1355,14 @@ window.approvePinjaman = async function (idx) {
     refreshBarangPinjamSelect();
     // Tambah: Sync otomatis ke Sheet (status PINJAM)
     await syncSinglePinjamanToSheet(pinjamans[globalIdx], 'pinjam');
+
+
+      // --- Kirim notifikasi Telegram ke admin/user
+    const barang = getData('barang').find(x => x.id === p.barangId);
+    sendTelegramNotif(
+      `✅ <b>Pinjaman Disetujui</b>\nUser: <b>${p.username}</b>\nBarang: <b>${barang ? barang.nama : ''}</b>\nJumlah: <b>${p.jumlah}</b>\nStatus: <b>Disetujui Admin</b>`
+    );
+
   }
 }
 
@@ -1677,6 +1688,12 @@ document.getElementById('formPinjam').onsubmit = function (e) {
   logAudit('Ajukan Pinjam', `Barang: ${barangId}, Jumlah: ${jumlah}`);
   refreshRiwayatPinjam();
   refreshBarangPinjamSelect();
+
+   // --- Kirim notifikasi Telegram
+  const barang = getData('barang').find(x => x.id === barangId);
+  sendTelegramNotif(
+    `📦 <b>Peminjaman Aset Baru</b>\nUser: <b>${CURRENT_USER.username}</b>\nBarang: <b>${barang ? barang.nama : ''}</b>\nJumlah: <b>${jumlah}</b>\nStatus: <b>Pending Approval</b>`
+  );
 };
 
 function refreshRiwayatPinjam() {
@@ -1733,6 +1750,12 @@ window.kembalikanPinjaman = async function (idx) {
     refreshBarangPinjamSelect();
     // Tambah: Sync otomatis ke Sheet (status KEMBALI)
     await syncSinglePinjamanToSheet(pinjamans[globalIdx], 'kembali');
+
+    // --- Kirim notifikasi Telegram
+    const barang = getData('barang').find(x => x.id === pinjaman.barangId);
+    sendTelegramNotif(
+      `🔄 <b>Pengembalian Aset</b>\nUser: <b>${CURRENT_USER.username}</b>\nBarang: <b>${barang ? barang.nama : ''}</b>\nJumlah: <b>${pinjaman.jumlah}</b>\nStatus: <b>Dikembalikan</b>`
+    );
   }
 }
 
@@ -2076,6 +2099,20 @@ async function tambahUserKeSheetPass(userObj) {
   }
 }
 
+// --- Notifikasi TELEGRAM ---
+
+function sendTelegramNotif(msg) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      chat_id: TELEGRAM_CHAT_ID,
+      text: msg,
+      parse_mode: "HTML"
+    })
+  });
+}
 
 // --- BATAS: INIT DOMContentLoaded ---
 

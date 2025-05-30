@@ -1379,7 +1379,7 @@ window.rejectPinjaman = function (idx) {
     renderApprovalTable();
     refreshRiwayatPinjam();
     refreshBarangPinjamSelect();
-  }
+  } 
 }
 
 
@@ -1664,6 +1664,12 @@ function getSisaStok(barangId) {
   return stok - terpakai;
 }
 
+function getNamaBarang(barangId) {
+  const barang = getData('barang').find(x => x.id === barangId);
+  return barang ? barang.nama : '-';
+}
+
+
 document.getElementById('formPinjam').onsubmit = function (e) {
   e.preventDefault();
   const barangId = document.getElementById('pinjamBarang').value;
@@ -1685,7 +1691,7 @@ document.getElementById('formPinjam').onsubmit = function (e) {
   setPinjamans(pinjamans);
   document.getElementById('formPinjam').reset();
   showToast("Permintaan pinjam dikirim, menunggu approval admin.", "info");
-  logAudit('Ajukan Pinjam', `Barang: ${barangId}, Jumlah: ${jumlah}`);
+  logAudit('Ajukan Pinjam', `Barang: ${getNamaBarang(barangId)}, Jumlah: ${jumlah}`);
   refreshRiwayatPinjam();
   refreshBarangPinjamSelect();
 
@@ -1750,6 +1756,7 @@ window.kembalikanPinjaman = async function (idx) {
     refreshBarangPinjamSelect();
     // Tambah: Sync otomatis ke Sheet (status KEMBALI)
     await syncSinglePinjamanToSheet(pinjamans[globalIdx], 'kembali');
+    logAudit('Kembalikan Pinjam', `Barang: ${getNamaBarang(pinjaman.barangId)}, Jumlah: ${pinjaman.jumlah}`);
 
     // --- Kirim notifikasi Telegram
     const barang = getData('barang').find(x => x.id === pinjaman.barangId);
@@ -2009,7 +2016,7 @@ window.approvePinjam = function (idx) {
   if (globalIdx > -1) {
     pinjamans[globalIdx].status = 'approved';
     setPinjamans(pinjamans);
-    logAudit('Approve Pinjam', `User: ${p.username}, Barang: ${p.barangId}, Jumlah: ${p.jumlah}`);
+    logAudit('Approve Pinjam', `User: ${p.username}, Barang: ${getNamaBarang(barangId)}, Jumlah: ${p.jumlah}`);
     showToast('Peminjaman disetujui!', 'success');
     refreshApprovalTable();
   }
@@ -2022,7 +2029,7 @@ window.rejectPinjam = function (idx) {
   if (globalIdx > -1) {
     pinjamans[globalIdx].status = 'rejected';
     setPinjamans(pinjamans);
-    logAudit('Reject Pinjam', `User: ${p.username}, Barang: ${p.barangId}, Jumlah: ${p.jumlah}`);
+    logAudit('Reject Pinjam', `User: ${p.username}, Barang: ${getNamaBarang(barangId)}, Jumlah: ${p.jumlah}`);
     showToast('Peminjaman ditolak!', 'danger');
     refreshApprovalTable();
   }

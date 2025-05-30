@@ -69,34 +69,3 @@ body { background: #f6f7fa; }
     width: 100% !important;
   }
 }
-
-/* Untuk Bootstrap Nav Tabs: vertikal di HP, horizontal di Desktop */
-@media (max-width: 767.98px) {
-  .nav-tabs {
-    display: flex !important;
-    flex-direction: column !important;
-    border-bottom: none !important;
-  }
-  .nav-tabs .nav-item {
-    width: 100%;
-    margin-bottom: 0.5rem;
-  }
-  .nav-tabs .nav-link {
-    border-radius: 8px !important;
-    text-align: left;
-    width: 100%;
-    border: 1px solid #e5e5e5;
-  }
-}
-@media (min-width: 768px) {
-  .nav-tabs {
-    flex-direction: row !important;
-  }
-  .nav-tabs .nav-item {
-    margin-bottom: 0 !important;
-  }
-  .nav-tabs .nav-link {
-    border-radius: 18px 18px 0 0 !important;
-    width: auto;
-  }
-}

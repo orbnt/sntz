@@ -28,19 +28,6 @@ const TELEGRAM_BOT_TOKEN = '7520083448:AAHbf4QgZurXd8gbI2OnM0PxD8jK_zAXJ08';
 const TELEGRAM_CHAT_ID = '968137878';
 
 
-function parseSheetRows(values) {
-  if (!values || values.length === 0) return [];
-  const headers = values[0];
-  return values.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => {
-      obj[h] = row[i] || '';
-    });
-    return obj;
-  });
-}
-
-
 let loginModalBS;
 
 function showLoginModal() {
@@ -74,13 +61,6 @@ function setData(key, data) {
   LS.setItem(key, JSON.stringify(data));
 }
 
-function getData(key) {
-  return JSON.parse(LS.getItem(key) || '[]');
-}
-
-function setData(key, data) {
-  LS.setItem(key, JSON.stringify(data));
-}
 
 function renderPaging(current, maxPage, setPageFuncName) {
   if (maxPage <= 1) return '';
@@ -354,30 +334,34 @@ document.getElementById('formBarang').onsubmit = function (e) {
   logAudit('Tambah Barang', `Barang: ${nama} | Kategori: ${kategori} | Spek: ${spesifikasi}`);
 };
 
-// Hapus Data
+// --- Hapus Bangunan ---
 window.deleteBangunan = function (id) {
   if (!confirm('Yakin hapus bangunan?')) return;
+  const b = getData('bangunan').find(x => x.id === id);
   setData('bangunan', getData('bangunan').filter(b => b.id !== id));
   setData('ruangan', getData('ruangan').filter(r => r.bangunanId !== id));
   refreshBangunan();
   refreshRuangan();
-  // LOG AKTIVITAS
   logAudit('Hapus Bangunan', `Bangunan: ${b ? b.nama : id}`);
-}
+};
+
+// --- Hapus Ruangan ---
 window.deleteRuangan = function (id) {
   if (!confirm('Yakin hapus ruangan?')) return;
+  const r = getData('ruangan').find(x => x.id === id);
   setData('ruangan', getData('ruangan').filter(r => r.id !== id));
   refreshRuangan();
-  // LOG AKTIVITAS
-  logAudit('Hapus Ruangan', `Ruangan: ${b ? b.nama : id}`);
-}
+  logAudit('Hapus Ruangan', `Ruangan: ${r ? r.nama : id}`);
+};
+
+// --- Hapus Barang ---
 window.deleteBarang = function (id) {
   if (!confirm('Yakin hapus barang?')) return;
+  const b = getData('barang').find(x => x.id === id);
   setData('barang', getData('barang').filter(b => b.id !== id));
   refreshBarang();
-  // LOG AKTIVITAS
   logAudit('Hapus Barang', `Barang: ${b ? b.nama : id}`);
-}
+};
 
 // --------- ASETRUANGAN (MAPPING BARANG KE RUANGAN) -------------
 let asetCurrentPage = 1;
@@ -796,9 +780,16 @@ document.getElementById('btnSyncSheet').onclick = async function () {
     document.getElementById('syncResult').innerHTML = '<span class="text-success">Data telah dikirim! Silakan cek Google Sheet Anda.</span>';
     // LOG AKTIVITAS
     logAudit('Sinkronisasi', `Sinkronisasi ${data.length} data aset ke Google Sheet`);
-  } catch (err) {
-    document.getElementById('syncResult').innerHTML = '<span class="text-danger">Koneksi gagal! ' + err.message + '</span>';
-  }
+  } 
+  
+  catch (err) {
+  document.getElementById('syncResult').innerHTML = `
+    <span class="text-danger">
+      Koneksi gagal! ${err.message}<br>
+      Data tetap aman di browser Anda, silakan ulang sinkronisasi jika internet sudah stabil.
+    </span>
+  `;
+}
 };
 
 // EXPORT EXCEL
@@ -1428,6 +1419,11 @@ function cekAksesUI() {
     if (tabPinjam) tabPinjam.style.display = '';
     if (panelPinjam) panelPinjam.style.display = '';
   }
+
+  // Sembunyikan tombol reset jika bukan admin
+  const btnResetApp = document.getElementById('btnResetApp');
+if (btnResetApp) btnResetApp.style.display = (CURRENT_USER && CURRENT_USER.role === 'admin') ? '' : 'none';
+
 }
 
 function showToast(msg, type = 'info', timeout = 3000) {
@@ -1987,27 +1983,6 @@ document.getElementById('searchAuditLog').oninput = function () {
 };
 
 
-function refreshApprovalTable() {
-  if (!CURRENT_USER || CURRENT_USER.role !== 'admin') return;
-  const pinjamans = getPinjamans().filter(p => p.status === 'pending');
-  const barang = getData('barang');
-  let html = '<table class="table"><thead><tr><th>User</th><th>Barang</th><th>Jumlah</th><th>Tanggal</th><th>Aksi</th></tr></thead><tbody>';
-  pinjamans.forEach((p, idx) => {
-    const b = barang.find(x => x.id === p.barangId);
-    html += `<tr>
-      <td>${p.username}</td>
-      <td>${b?b.nama:''}</td>
-      <td>${p.jumlah}</td>
-      <td>${new Date(p.tanggal).toLocaleString()}</td>
-      <td>
-        <button class="btn btn-sm btn-success" onclick="approvePinjam(${idx})">Approve</button>
-        <button class="btn btn-sm btn-danger" onclick="rejectPinjam(${idx})">Reject</button>
-      </td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  document.getElementById('approvalTable').innerHTML = html;
-}
 window.approvePinjam = function (idx) {
   let pinjamans = getPinjamans();
   let pending = pinjamans.filter(p => p.status === 'pending');
@@ -2018,7 +1993,7 @@ window.approvePinjam = function (idx) {
     setPinjamans(pinjamans);
     logAudit('Approve Pinjam', `User: ${p.username}, Barang: ${getNamaBarang(barangId)}, Jumlah: ${p.jumlah}`);
     showToast('Peminjaman disetujui!', 'success');
-    refreshApprovalTable();
+    renderApprovalTable();
   }
 }
 window.rejectPinjam = function (idx) {
@@ -2031,7 +2006,7 @@ window.rejectPinjam = function (idx) {
     setPinjamans(pinjamans);
     logAudit('Reject Pinjam', `User: ${p.username}, Barang: ${getNamaBarang(barangId)}, Jumlah: ${p.jumlah}`);
     showToast('Peminjaman ditolak!', 'danger');
-    refreshApprovalTable();
+    renderApprovalTable();
   }
 }
 
@@ -2077,14 +2052,6 @@ document.querySelector('a[href="#laporan"]').addEventListener('shown.bs.tab', fu
 });
 
 
-
-async function fetchAllUsers() {
-  let res = await fetch(AUTH_API_URL);
-let rawUsers = await res.json();
-let users = parseSheetRows(rawUsers.values || []);
-}
-
-
 // Fungsi simpan user ke Sheet "Pass" via GAS (POST)
 async function tambahUserKeSheetPass(userObj) {
   const payload = {
@@ -2120,6 +2087,64 @@ function sendTelegramNotif(msg) {
     })
   });
 }
+
+// --- BACKUP & RESTORE ---
+// --- Backup Data Lokal ke File JSON ---
+function backupAllData() {
+    const keys = ['bangunan', 'ruangan', 'barang', 'asetruangan', 'users', 'pinjamans', 'audit_logs'];
+    const backup = {};
+    keys.forEach(k => backup[k] = getData(k));
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'backup_inventaris_sntz_' + new Date().toISOString().replace(/[:.]/g,'-') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    document.getElementById('backupRestoreInfo').innerHTML = '<span class="text-success">Backup data berhasil diunduh!</span>';
+    setTimeout(() => { document.getElementById('backupRestoreInfo').innerHTML = ''; }, 5000);
+}
+
+// --- Restore Data dari File JSON ---
+function handleRestoreFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            const keys = ['bangunan', 'ruangan', 'barang', 'asetruangan', 'users', 'pinjamans', 'audit_logs'];
+            keys.forEach(k => {
+                if (data[k]) setData(k, data[k]);
+            });
+            document.getElementById('backupRestoreInfo').innerHTML = '<span class="text-success">Restore data berhasil! Silakan refresh halaman.</span>';
+            setTimeout(() => { location.reload(); }, 1500);
+        } catch (err) {
+            document.getElementById('backupRestoreInfo').innerHTML = '<span class="text-danger">Restore gagal: file tidak valid.</span>';
+        }
+    };
+    reader.readAsText(file);
+    // Reset value agar bisa pilih file yang sama lagi di lain waktu
+    event.target.value = '';
+}
+
+// --- RESET: All Data ---
+function resetAllAppData() {
+    if (!CURRENT_USER || CURRENT_USER.role !== 'admin') {
+        document.getElementById('resetAppInfo').innerHTML = '<span class="text-danger">Akses hanya untuk admin!</span>';
+        return;
+    }
+    if (!confirm('Yakin ingin menghapus SEMUA DATA aplikasi (master data, user, aset, pinjaman, log)? Proses tidak bisa dibatalkan!')) return;
+    
+    // Hapus semua key yang digunakan aplikasi
+    ['bangunan', 'ruangan', 'barang', 'asetruangan', 'users', 'pinjamans', 'audit_logs', 'current_user'].forEach(localStorage.removeItem.bind(localStorage));
+    
+    document.getElementById('resetAppInfo').innerHTML = '<span class="text-success">Semua data aplikasi berhasil direset! Halaman akan dimuat ulang.</span>';
+    setTimeout(() => { location.reload(); }, 1200);
+}
+
 
 // --- BATAS: INIT DOMContentLoaded ---
 

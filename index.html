@@ -418,6 +418,27 @@
                         <div id="syncResult" class="text-center"></div>
                         <div class="small text-muted mt-2">Sinkronisasi akan mengirim semua data aset ke Google Sheets
                             dengan timestamp.</div>
+                        <hr>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold">Backup & Restore Data</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-secondary" type="button" onclick="backupAllData()">Backup
+                                    Data</button>
+                                <input type="file" id="restoreFile" accept="application/json" style="display: none;"
+                                    onchange="handleRestoreFile(event)">
+                                <button class="btn btn-warning" type="button"
+                                    onclick="document.getElementById('restoreFile').click()">Restore Data</button>
+                            </div>
+                            <div id="backupRestoreInfo" class="small text-muted mt-1"></div>
+                        </div>
+                        <hr>
+                        <div class="mb-2">
+                            <button class="btn btn-danger" type="button" id="btnResetApp" onclick="resetAllAppData()"
+                                style="font-weight:bold;">
+                                <span class="me-1">&#9888;</span>Reset Aplikasi (Admin Saja)
+                            </button>
+                            <div id="resetAppInfo" class="small text-muted mt-1"></div>
+                        </div>
                     </div>
                 </div>
                 <div id="userSection" class="mb-4" style="display:none;">
@@ -541,19 +562,22 @@
                             </table>
                         </div>
                         <div class="d-flex align-items-center justify-content-between mb-2">
-  <div>
-    Tampilkan
-    <select id="auditLogShowCount" class="form-select form-select-sm d-inline-block" style="width:auto;">
-      <option value="10">10</option>
-      <option value="30">30</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
-    data
-  </div>
-  <input type="text" id="searchAuditLog" class="form-control form-control-sm d-inline-block ms-2" style="width:200px;" placeholder="Cari...">
-</div>
-<div id="auditLogPaging" class="mt-2"></div>
+                            <div>
+                                Tampilkan
+                                <select id="auditLogShowCount" class="form-select form-select-sm d-inline-block"
+                                    style="width:auto;">
+                                    <option value="10">10</option>
+                                    <option value="30">30</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                data
+                            </div>
+                            <input type="text" id="searchAuditLog"
+                                class="form-control form-control-sm d-inline-block ms-2" style="width:200px;"
+                                placeholder="Cari...">
+                        </div>
+                        <div id="auditLogPaging" class="mt-2"></div>
                     </div>
                 </div>
             </div>

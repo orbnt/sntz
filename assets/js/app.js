@@ -1,7 +1,42 @@
 // --- MASTER DATA --- //
 const SHEET_ID = '1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI';
-const AUTH_API_URL = `https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Auth`; // Untuk GET data user (login)
-const PASS_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJbc9KbBN9jfVDpfHTFXvUm4OOqjlWRgDd1paHFZRB63OQ4k4bLkfSk0tCrji3BRs/exec'; // Untuk POST user baru
+const GOOGLE_API_KEY = 'AIzaSyBf3LLK72GTjY-m4Wzh8vd0BBIujgyH5t0';
+
+// Helper konversi dari array-of-array ke array-of-object
+function parseSheetRows(values) {
+  if (!values || values.length === 0) return [];
+  const headers = values[0];
+  return values.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = row[i] || '';
+    });
+    return obj;
+  });
+}
+
+const DASHBOARD_SHEET_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Daftar%20Aset?key=${GOOGLE_API_KEY}`;
+const DAFTAR_ASET_SHEET_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Daftar%20Aset?key=${GOOGLE_API_KEY}`;
+const MASTER_SHEET_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Master%20Barang?key=${GOOGLE_API_KEY}`;
+const AUTH_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Auth?key=${GOOGLE_API_KEY}`;
+
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOsD8nwHHpk7j-W65NDDDmFyZEDXi_QBBBnByeO6gAQRdBGUxvRAR7zL_Ii5oUut110Q/exec';
+const PINJAM_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8i7CXrMj8zpBf7X6wn_24TBhEsvgQWY6-PcyrF1p3Q6muQ4TPgcr6wYwpXxo0erXB/exec';
+const PASS_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvqkYuGGsEKPyWGnCwyOUpi7yaYJEm8xV7M6kZfaxkMeWSGt2VAtJyBuUKoLPT120/exec';
+
+
+function parseSheetRows(values) {
+  if (!values || values.length === 0) return [];
+  const headers = values[0];
+  return values.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = row[i] || '';
+    });
+    return obj;
+  });
+}
+
 
 let loginModalBS;
 
@@ -103,7 +138,10 @@ document.getElementById('formBangunan').onsubmit = function (e) {
   document.getElementById('formBangunan').reset();
   refreshBangunan();
   refreshRuangan();
+   // LOG AKTIVITAS
+  logAudit('Tambah Bangunan', `Bangunan: ${nama}`);
 };
+
 // CRUD Ruangan
 document.getElementById('formRuangan').onsubmit = function (e) {
   e.preventDefault();
@@ -119,7 +157,10 @@ document.getElementById('formRuangan').onsubmit = function (e) {
   setData('ruangan', ruangan);
   document.getElementById('formRuangan').reset();
   refreshRuangan();
+   // LOG AKTIVITAS
+  logAudit('Tambah Ruangan', `Ruangan: ${nama}`);
 };
+
 // CRUD Barang
 document.getElementById('formBarang').onsubmit = function (e) {
   e.preventDefault();
@@ -137,7 +178,10 @@ document.getElementById('formBarang').onsubmit = function (e) {
   setData('barang', barang);
   document.getElementById('formBarang').reset();
   refreshBarang();
+   // LOG AKTIVITAS
+  logAudit('Tambah Barang', `Barang: ${nama} | Kategori: ${kategori} | Spek: ${spesifikasi}`);
 };
+
 // Hapus Data
 window.deleteBangunan = function (id) {
   if (!confirm('Yakin hapus bangunan?')) return;
@@ -145,16 +189,22 @@ window.deleteBangunan = function (id) {
   setData('ruangan', getData('ruangan').filter(r => r.bangunanId !== id));
   refreshBangunan();
   refreshRuangan();
+  // LOG AKTIVITAS
+  logAudit('Hapus Bangunan', `Bangunan: ${b ? b.nama : id}`);
 }
 window.deleteRuangan = function (id) {
   if (!confirm('Yakin hapus ruangan?')) return;
   setData('ruangan', getData('ruangan').filter(r => r.id !== id));
   refreshRuangan();
+  // LOG AKTIVITAS
+  logAudit('Hapus Ruangan', `Ruangan: ${b ? b.nama : id}`);
 }
 window.deleteBarang = function (id) {
   if (!confirm('Yakin hapus barang?')) return;
   setData('barang', getData('barang').filter(b => b.id !== id));
   refreshBarang();
+  // LOG AKTIVITAS
+  logAudit('Hapus Barang', `Barang: ${b ? b.nama : id}`);
 }
 
 // --------- ASETRUANGAN (MAPPING BARANG KE RUANGAN) -------------
@@ -224,41 +274,59 @@ document.getElementById('formAsetRuangan').onsubmit = function (e) {
   const jumlah = parseInt(document.getElementById('jumlahAset').value);
   const kondisi = document.getElementById('kondisiAset').value;
   const catatan = document.getElementById('catatanAset').value.trim();
+  const kebutuhan = parseInt(document.getElementById('kebutuhanAset').value) || 0;
 
   if (!ruanganId || !barangId || !jumlah || !kondisi) return;
 
-  // Cek jika data serupa sudah ada, update jumlah/kondisi
   let asetRuangan = getData('asetruangan');
   const existing = asetRuangan.find(a => a.ruanganId === ruanganId && a.barangId === barangId);
 
+  // Ambil nama barang/ruangan
+  const barang = getData('barang').find(b => b.id === barangId);
+  const ruangan = getData('ruangan').find(r => r.id === ruanganId);
+
   if (existing) {
-  existing.jumlah = jumlah;
-  existing.kebutuhan = parseInt(document.getElementById('kebutuhanAset').value) || 0;
-  existing.kondisi = kondisi;
-  existing.catatan = catatan;
+    existing.jumlah = jumlah;
+    existing.kebutuhan = kebutuhan;
+    existing.kondisi = kondisi;
+    existing.catatan = catatan;
+    setData('asetruangan', asetRuangan);
+    // LOG EDIT
+    logAudit('Edit Aset', `Barang: ${barang ? barang.nama : barangId}, Ruangan: ${ruangan ? ruangan.nama : ruanganId}, Jumlah: ${jumlah}, Kondisi: ${kondisi}`);
   } else {
     asetRuangan.push({
-  id: uuid(),
-  ruanganId,
-  barangId,
-  kebutuhan: parseInt(document.getElementById('kebutuhanAset').value) || 0,
-  jumlah,
-  kondisi,
-  catatan
+      id: uuid(),
+      ruanganId,
+      barangId,
+      kebutuhan,
+      jumlah,
+      kondisi,
+      catatan
     });
+    setData('asetruangan', asetRuangan);
+    // LOG TAMBAH
+    logAudit('Tambah Aset', `Barang: ${barang ? barang.nama : barangId}, Ruangan: ${ruangan ? ruangan.nama : ruanganId}, Jumlah: ${jumlah}, Kondisi: ${kondisi}`);
   }
-  setData('asetruangan', asetRuangan);
+
   document.getElementById('formAsetRuangan').reset();
   refreshAsetRuanganTable();
 };
 
+
 window.deleteAsetRuangan = function (id) {
   if (!confirm('Hapus data aset ini?')) return;
   let asetRuangan = getData('asetruangan');
+  const aset = asetRuangan.find(a => a.id === id);
+  // Ambil nama barang/ruangan
+  const barang = getData('barang').find(b => b.id === (aset ? aset.barangId : ''));
+  const ruangan = getData('ruangan').find(r => r.id === (aset ? aset.ruanganId : ''));
   asetRuangan = asetRuangan.filter(a => a.id !== id);
   setData('asetruangan', asetRuangan);
   refreshAsetRuanganTable();
+  // LOG HAPUS
+  logAudit('Hapus Aset', `Barang: ${barang ? barang.nama : (aset ? aset.barangId : id)}, Ruangan: ${ruangan ? ruangan.nama : (aset ? aset.ruanganId : id)}`);
 };
+
 
 // Edit (load data ke form)
 window.editAsetRuangan = function (id) {
@@ -363,7 +431,6 @@ document.getElementById('filterLaporanRuangan').onchange = function () {
 // ------- SINKRONISASI GOOGLE SHEETS -------
 
 // Ganti dengan URL Google Apps Script milik Anda
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOsD8nwHHpk7j-W65NDDDmFyZEDXi_QBBBnByeO6gAQRdBGUxvRAR7zL_Ii5oUut110Q/exec';
 
 document.getElementById('btnSyncSheet').onclick = async function () {
   const asetRuangan = getData('asetruangan');
@@ -404,6 +471,8 @@ document.getElementById('btnSyncSheet').onclick = async function () {
       mode: 'no-cors'
     });
     document.getElementById('syncResult').innerHTML = '<span class="text-success">Data telah dikirim! Silakan cek Google Sheet Anda.</span>';
+    // LOG AKTIVITAS
+    logAudit('Sinkronisasi', `Sinkronisasi ${data.length} data aset ke Google Sheet`);
   } catch (err) {
     document.getElementById('syncResult').innerHTML = '<span class="text-danger">Koneksi gagal! ' + err.message + '</span>';
   }
@@ -607,8 +676,6 @@ document.getElementById('btnResetAll').onclick = function () {
   }
 };
 
-// Ganti ini dengan URL JSON Google Sheets Anda
-const DASHBOARD_SHEET_URL = "https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Daftar%20Aset";
 
 let dashboardLevel = 'all'; // all > building > room > aset
 let dashboardStack = []; // for back navigation
@@ -617,7 +684,9 @@ let dashboardStack = []; // for back navigation
 async function renderDashboard() {
   document.getElementById('dashboardContent').innerHTML = '<div class="text-center my-5"><div class="spinner-border"></div><div>Loading data...</div></div>';
   const response = await fetch(DASHBOARD_SHEET_URL);
-  let data = await response.json();
+const rawData = await response.json();
+let data = parseSheetRows(rawData.values || []);
+
 
   // Normalisasi data
   data = data.filter(row => row["Nama Barang"]); // pastikan ada barang
@@ -781,7 +850,6 @@ document.querySelector('a[href="#dashboard"]').addEventListener('shown.bs.tab', 
   renderDashboard();
 });
 
-const DAFTAR_ASET_SHEET_URL = "https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Daftar%20Aset";
 
 document.getElementById('btnLaporanSelisih').onclick = async function () {
   // Tampilkan loading
@@ -791,7 +859,8 @@ document.getElementById('btnLaporanSelisih').onclick = async function () {
 
   // Ambil data dari sheet
   const response = await fetch(DAFTAR_ASET_SHEET_URL);
-  const data = await response.json();
+const rawData = await response.json();
+const data = parseSheetRows(rawData.values || []);
   // Filter hanya yang punya selisih
   const dataSelisih = data.filter(r => {
     const kebutuhan = parseInt(r["Kebutuhan"]) || 0;
@@ -841,7 +910,8 @@ let CURRENT_USER = getCurrentUser();
 async function fetchUsersFromSheet() {
   try {
     let res = await fetch(AUTH_API_URL);
-    let users = await res.json();
+let rawUsers = await res.json();
+let users = parseSheetRows(rawUsers.values || []);
     // Normalisasi kategoriAkses agar selalu array
     users = users.map(u => ({
       ...u,
@@ -865,34 +935,25 @@ document.getElementById('formLogin').onsubmit = async function (e) {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
 
-  let users = [];
-  let online = true;
+  let users = await fetchUsersFromSheet();
 
-  try {
-    const res = await fetch(AUTH_API_URL);
-    users = await res.json();
-    // Pastikan kategoriAkses selalu array
-    users = users.map(u => ({
-      ...u,
-      kategoriAkses: Array.isArray(u.kategoriAkses)
-        ? u.kategoriAkses
-        : (typeof u.kategoriAkses === 'string'
-            ? u.kategoriAkses.split(',').map(s => s.trim()).filter(Boolean)
-            : [])
-    }));
-    setUsers(users); // simpan ke local storage untuk fallback offline
-  } catch (err) {
-    online = false;
-    users = getUsers(); // fallback ke local
-    showToast("Mode offline! Login pakai data lokal.", "warning");
-  }
+  // Normalisasi lagi jika perlu (seharusnya sudah)
+  users = users.map(u => ({
+    ...u,
+    kategoriAkses: Array.isArray(u.kategoriAkses)
+      ? u.kategoriAkses
+      : (typeof u.kategoriAkses === 'string'
+          ? u.kategoriAkses.split(',').map(s => s.trim()).filter(Boolean)
+          : [])
+  }));
 
-  // Cari user yang cocok
+  console.log('Data user:', users, 'Input:', username, password);
   const user = users.find(u => u.username === username && u.password === password);
+  console.log('User ditemukan:', user);
+
   if (user) {
     CURRENT_USER = user;
     setCurrentUser(user);
-    console.log('Login sukses, hide modal!');
     hideLoginModal();
     updateUserInfo();
     cekAksesUI();
@@ -1091,11 +1152,11 @@ document.querySelectorAll('.nav-link').forEach(tab => {
   });
 });
 
-const MASTER_SHEET_URL = 'https://opensheet.vercel.app/1lRFH01IHzA_dz_rzpUMQ0z4ZyE7Ek0eoUuYs84oHkwI/Master%20Barang';
 
 async function fetchStokAwal() {
   const res = await fetch(MASTER_SHEET_URL);
-  const data = await res.json();
+const raw = await res.json();
+const data = parseSheetRows(raw.values || []);
   // Data: [{Kode Barang, Nama Barang, Kategori, Spesifikasi, Stok Awal, ...}]
   return data;
 }
@@ -1130,10 +1191,13 @@ function refreshUserTable() {
     `;
   });
 }
+
 window.deleteUser = function (idx) {
   let users = getUsers();
   if (users[idx].username === 'admin') return alert("User admin utama tidak bisa dihapus!");
   if (confirm("Hapus user ini?")) {
+    // LOG HAPUS USER
+    logAudit('Hapus User', `User: ${users[idx].username} | Role: ${users[idx].role}`);
     users.splice(idx, 1);
     setUsers(users);
     refreshUserTable();
@@ -1162,6 +1226,8 @@ document.getElementById('formUser').onsubmit = async function (e) {
   document.getElementById('formUser').reset();
   refreshUserTable();
 
+  // LOG TAMBAH USER
+  logAudit('Tambah User', `User: ${username} | Role: ${role} | Kategori: ${(kategoriAkses || []).join(',')}`);
   // Kirim ke Sheet Pass saja (bukan Auth)
   tambahUserKeSheetPass(userObj);
 }
@@ -1351,7 +1417,6 @@ function doPost(e) {
   }
 }
 
-const PINJAM_SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8i7CXrMj8zpBf7X6wn_24TBhEsvgQWY6-PcyrF1p3Q6muQ4TPgcr6wYwpXxo0erXB/exec';
 
 // Kirim semua transaksi baru (belum terkirim)
 async function syncPinjamansToSheet() {
@@ -1579,8 +1644,9 @@ document.querySelector('a[href="#laporan"]').addEventListener('shown.bs.tab', fu
 
 
 async function fetchAllUsers() {
-  const res = await fetch(AUTH_API_URL);
-  return await res.json(); // array
+  let res = await fetch(AUTH_API_URL);
+let rawUsers = await res.json();
+let users = parseSheetRows(rawUsers.values || []);
 }
 
 

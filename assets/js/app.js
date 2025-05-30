@@ -818,21 +818,22 @@ document.getElementById('btnLaporanSelisih').onclick = async function () {
 };
 
 
-let loginModalBS; // global var untuk modal instance
+let loginModalBS;
 
 function showLoginModal() {
-  // Cek jika sudah ada instance, jika tidak buat baru
   if (!loginModalBS) {
-    loginModalBS = new bootstrap.Modal(document.getElementById('loginModal'));
+    const el = document.getElementById('loginModal');
+    if (el) loginModalBS = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
   }
-  loginModalBS.show();
+  if (loginModalBS) loginModalBS.show();
 }
 
 function hideLoginModal() {
   if (!loginModalBS) {
-    loginModalBS = new bootstrap.Modal(document.getElementById('loginModal'));
+    const el = document.getElementById('loginModal');
+    if (el) loginModalBS = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
   }
-  loginModalBS.hide();
+  if (loginModalBS) loginModalBS.hide();
 }
 
 
